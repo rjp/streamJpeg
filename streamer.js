@@ -1,6 +1,11 @@
 var sys = require('sys'),
 http = require('http'),
-fs = require('fs');
+fs = require('fs'),
+emitter = require('events').EventEmitter;
+
+function Eventer() {};
+Eventer.prototype = new process.EventEmitter();
+var emitter = new Eventer();
 
 var hc = require('./node-httpclient/lib/httpclient');
 var url = 'http://10.0.0.254/Jpeg/CamImg.jpg';
