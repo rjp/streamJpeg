@@ -1,0 +1,3 @@
+[submodule "node-httpclient"]
+	path = node-httpclient
+	url = git://github.com/timbaobjects/node-httpclient.git
