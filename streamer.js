@@ -14,21 +14,23 @@ var client = new hc.httpclient();
 var g_fetcher = undefined;
 var listeners = 0;
 
-emitter.addListener("start-streaming", function(){
+emitter.addListener("start-streaming", function(key){
     listeners++;
-    sys.puts("we have "+listeners+" listeners, fetching");
-	g_fetcher = setInterval(function(){
-	    client.perform(url, "GET", function(result) {
-	        var body = result.response.body;
-	        var jl = body.length;
-	        sys.puts("fetched JPEG of "+jl);
-	        emitter.emit("webcam-image", jl, body);
-	    }, null, {"Connection":"close", "x-binary": true}, null);
-	}, 10000);
-    sys.puts("fetcher = "+sys.inspect(g_fetcher));
+    // only start fetching if we don't already have a fetcher running
+    if (g_fetcher === undefined) {
+		g_fetcher = setInterval(function(){
+		    client.perform(url, "GET", function(result) {
+		        var body = result.response.body;
+		        var jl = body.length;
+		        sys.puts("fetched JPEG of "+jl);
+		        emitter.emit("webcam-image", jl, body);
+		    }, null, {"Connection":"close", "x-binary": true}, null);
+		}, 10000);
+	    sys.puts("fetcher = "+sys.inspect(g_fetcher));
+    }
 });
 
-emitter.addListener("stop-streaming", function(){
+emitter.addListener("stop-streaming", function(key){
     if (listeners > 0) { 
         listeners--;
         sys.puts("stop-streaming: listeners == "+listeners);
@@ -40,10 +42,11 @@ emitter.addListener("stop-streaming", function(){
 });    
 
 http.createServer(function (req, res) {
-    emitter.emit("start-streaming");
+    var mykey = req.headers['REMOTE_ADDR'];
+    emitter.emit("start-streaming", key);
     req.connection.addListener("end", function(){
         sys.puts("http stream ended");
-        emitter.emit("stop-streaming");
+        emitter.emit("stop-streaming", key);
     });
     res.writeHead(200, {
         'Expires': "Thu, 1 Jan 1998 00:00:00 GMT",
