@@ -12,10 +12,9 @@ var url = 'http://10.0.0.254/Jpeg/CamImg.jpg';
 
 var client = new hc.httpclient();
 var g_fetcher = undefined;
-var listeners = 0;
+var listeners = [];
 
 emitter.addListener("start-streaming", function(key){
-    listeners++;
     // only start fetching if we don't already have a fetcher running
     if (g_fetcher === undefined) {
 		g_fetcher = setInterval(function(){
@@ -31,18 +30,32 @@ emitter.addListener("start-streaming", function(key){
 });
 
 emitter.addListener("stop-streaming", function(key){
-    if (listeners > 0) { 
-        listeners--;
-        sys.puts("stop-streaming: listeners == "+listeners);
-        if (listeners == 0 && g_fetcher !== undefined) {
-            sys.puts("clearing interval "+sys.inspect(g_fetcher));
-            clearInterval(g_fetcher);
-        }
+    delete listeners[key];
+    var count = Object.keys(listeners).length;
+    sys.puts("stop-streaming: listeners == "+count);
+    if (count == 0 && g_fetcher !== undefined) {
+        sys.puts("clearing interval "+sys.inspect(g_fetcher));
+        clearInterval(g_fetcher);
     }
 });    
 
+emitter.addListener('webcam-image', function(jl, body) {
+    sys.puts("got a JPEG of "+jl);
+    for(var i in listeners) {
+        var res = listeners[i];
+        sys.puts("sending jpeg to "+i);
+	    res.write(
+	        "Content-Type: image/jpeg\r\n"+
+	        "Content-Length: "+jl+"\r\n"+
+	        "\r\n"+ body +
+	        "\r\n--mp-boundary\r\n",
+	        "binary"
+	    );
+    }
+});
+
 http.createServer(function (req, res) {
-    var mykey = req.headers['REMOTE_ADDR'];
+    var key = req.connection.remoteAddress + ':' + req.connection.remotePort;
     emitter.emit("start-streaming", key);
     req.connection.addListener("end", function(){
         sys.puts("http stream ended");
@@ -52,16 +65,6 @@ http.createServer(function (req, res) {
         'Expires': "Thu, 1 Jan 1998 00:00:00 GMT",
         'Content-Type': 'multipart/x-mixed-replace; boundary=mp-boundary'
     });
-    sys.puts('Starting sending time');
     res.write("--mp-boundary\r\n");
-    emitter.addListener("webcam-image", function(jl, body) {
-        sys.puts("got a JPEG of "+jl);
-        res.write(
-            "Content-Type: image/jpeg\r\n"+
-            "Content-Length: "+jl+"\r\n"+
-            "\r\n"+ body +
-            "\r\n--mp-boundary\r\n",
-            "binary"
-        );
-    });
+    listeners[key] = res;
 }).listen(8090);
