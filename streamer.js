@@ -3,12 +3,29 @@ http = require('http'),
 fs = require('fs'),
 emitter = require('events').EventEmitter;
 
+// DEFAULT CONFIGURATION
+var defaults = {
+    "webcam": 'http://10.0.0.254/Jpeg/CamImg.jpg',
+    "port"  : 8090,
+    "interval": 10000 // milliseconds
+};
+
+var url = process.argv[2] || defaults.webcam;
+var port = parseInt(process.argv[3], 10) || defaults.port;
+var interval = parseInt(process.argv[4], 10) || defaults.interval;
+
+if (interval < 1000) { // possibly in seconds
+    sys.puts("* interval of " + interval + " too small, converting to milliseconds");
+    interval = interval * 1000;
+}
+
+sys.puts("* will fetch every " + interval + "ms from " + url + " to port " + port);
+
 function Eventer() {};
 Eventer.prototype = new process.EventEmitter();
 var emitter = new Eventer();
 
 var hc = require('./node-httpclient/lib/httpclient');
-var url = 'http://10.0.0.254/Jpeg/CamImg.jpg';
 
 var client = new hc.httpclient();
 var g_fetcher = undefined;
@@ -67,4 +84,4 @@ http.createServer(function (req, res) {
     });
     res.write("--mp-boundary\r\n");
     listeners[key] = res;
-}).listen(8090);
+}).listen(port);
