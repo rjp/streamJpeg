@@ -1,7 +1,16 @@
 var sys = require('sys'),
 http = require('http'),
 fs = require('fs'),
-emitter = require('events').EventEmitter;
+emitter = require('events').EventEmitter,
+hc;
+
+try {
+    hc = require('./node-httpclient/lib/httpclient');
+} catch(e) {
+    sys.puts("Requiring node-httpclient failed, did you update the submodule?");
+    sys.puts("git submodule init && git submodule update # run me");
+    process.exit(1)
+}
 
 // DEFAULT CONFIGURATION
 var defaults = {
@@ -25,7 +34,6 @@ function Eventer() {};
 Eventer.prototype = new process.EventEmitter();
 var emitter = new Eventer();
 
-var hc = require('./node-httpclient/lib/httpclient');
 
 var client = new hc.httpclient();
 var g_fetcher = undefined;
